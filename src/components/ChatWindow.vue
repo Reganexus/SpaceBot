@@ -78,7 +78,7 @@ const handleRecommendationClick = (text) => {
         class="flex items-center gap-3 p-3 border-b border-gray-700 rounded-xl"
       >
         <img
-          src="../assets/astro.jpg"
+          src="/astro.jpg"
           alt="SpaceBot"
           class="w-10 h-10 rounded-full"
         />
