@@ -42,10 +42,26 @@ const renderMessage = (text) => {
 };
 
 const recommendations = [
-  { title: "🌌 Show Planets", description: "List all planets in the Solar System", text: "Can you list all the planets in the Solar System?" },
-  { title: "✨ Show Stars", description: "List some bright stars", text: "Can you list some bright stars?" },
-  { title: "🪐 Exoplanets", description: "Show interesting exoplanets", text: "Can you tell me about interesting exoplanets?" },
-  { title: "🚀 Space Facts", description: "Give me a random space fact", text: "Give me a random space fact" },
+  {
+    title: "🌌 Show Planets",
+    description: "List all planets in the Solar System",
+    text: "Can you list all the planets in the Solar System?",
+  },
+  {
+    title: "✨ Show Stars",
+    description: "List some bright stars",
+    text: "Can you list some bright stars?",
+  },
+  {
+    title: "🪐 Exoplanets",
+    description: "Show interesting exoplanets",
+    text: "Can you tell me about interesting exoplanets?",
+  },
+  {
+    title: "🚀 Space Facts",
+    description: "Give me a random space fact",
+    text: "Give me a random space fact",
+  },
 ];
 
 const handleRecommendationClick = (text) => {
@@ -89,14 +105,34 @@ const handleRecommendationClick = (text) => {
         <div
           :class="[
             'p-3 rounded-lg max-w-[70%] break-words whitespace-pre-wrap',
-            msg.sender === 'bot' ? 'bg-gray-800 text-white' : 'bg-blue-600 text-white'
+            msg.sender === 'bot'
+              ? 'bg-gray-800 text-white'
+              : 'bg-blue-600 text-white',
           ]"
-          v-html="renderMessage(msg.text)"
-        ></div>
+        >
+          <template v-if="msg.loading">
+            <span class="animate-pulse">SpaceBot is thinking...</span>
+          </template>
+          <template v-else>
+            <span v-html="renderMessage(msg.text)"></span>
+          </template>
+        </div>
+
+        <!-- Retry Button for errors -->
+        <button
+          v-if="msg.sender === 'bot' && msg.error"
+          @click="$emit('retry', msg)"
+          class="ml-2 px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
+        >
+          Retry
+        </button>
       </div>
 
       <!-- Recommendations -->
-      <div v-if="showRecommendations" class="absolute left-0 bottom-0 w-full overflow-hidden grid md:grid-cols-2 grid-cols-1 gap-2 md:px-8 px-2">
+      <div
+        v-if="showRecommendations"
+        class="absolute left-0 bottom-0 w-full overflow-hidden grid md:grid-cols-2 grid-cols-1 gap-2 md:px-8 px-2"
+      >
         <button
           v-for="(card, i) in recommendations"
           :key="i"

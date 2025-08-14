@@ -10,7 +10,12 @@
       <div
         class="flex flex-col flex-1 rounded-2xl p-4 gap-4 bg-neutral-50/5 backdrop-blur-xs border border-white/20 shadow-lg h-[90dvh]"
       >
-        <ChatWindow :messages="messages" @send="sendMessage" />
+        <ChatWindow
+          :messages="messages"
+          @send="sendMessage"
+          @retry="retryMessage"
+        />
+
         <ChatInput @send="sendMessage" />
       </div>
 
@@ -34,6 +39,8 @@ const messages = ref([
   { sender: "bot", text: "Hello! I am SpaceBot. Ask me anything about space!" },
 ]);
 
+const isLoading = ref(false);
+
 // Helper function for retrying fetch requests
 async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
   for (let i = 0; i < retries; i++) {
@@ -43,7 +50,6 @@ async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
       return await res.json();
     } catch (err) {
       if (i < retries - 1) {
-        // exponential backoff
         await new Promise((resolve) => setTimeout(resolve, delay));
         delay *= 2;
       } else {
@@ -53,10 +59,12 @@ async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
   }
 }
 
-const sendMessage = async (text) => {
-  if (!text.trim()) return;
+const retryMessage = async (msg) => {
+  if (!msg.originalText) return;
 
-  messages.value.push({ sender: "user", text });
+  msg.text = "⏳ Retrying...";
+  msg.loading = true;
+  msg.error = false;
 
   try {
     const data = await fetchWithRetry(
@@ -64,19 +72,62 @@ const sendMessage = async (text) => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: msg.originalText }),
       },
       3,
       1000
     );
 
-    messages.value.push({ sender: "bot", text: data.reply });
+    msg.text = data.reply;
   } catch (err) {
-    messages.value.push({
-      sender: "bot",
-      text: `Error: ${err.message}. Please try again later.`,
+    msg.text = `Error: ${err.message}. Please try again later.`;
+    msg.error = true;
+  } finally {
+    msg.loading = false;
+  }
+};
+
+// Send a chat message
+const sendMessage = async (text) => {
+  if (!text.trim()) return;
+
+  messages.value.push({ sender: "user", text });
+  const messageIndex = messages.value.length;
+  messages.value.push({
+    sender: "bot",
+    text: "SpaceBot is thinking...",
+    loading: true,
+    originalText: text,
+  });
+
+  isLoading.value = true;
+
+  try {
+    const data = await fetchWithRetry("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }),
     });
+
+    messages.value[messageIndex].text = data.reply;
+    messages.value[messageIndex].loading = false;
+  } catch (err) {
+    const errorMessage =
+      err instanceof TypeError
+        ? "Cannot reach server. Check your internet connection."
+        : err.message
+        ? `Error: ${err.message}`
+        : "Something went wrong. Please try again later.";
+
+    messages.value[messageIndex].text = errorMessage;
+    messages.value[messageIndex].loading = false;
+
+    // Set error flag and store text for retry
+    messages.value[messageIndex].error = true;
+
     console.error("Chat API error:", err);
+  } finally {
+    isLoading.value = false;
   }
 };
 </script>
