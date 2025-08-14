@@ -60,7 +60,7 @@ const sendMessage = async (text) => {
 
   try {
     const data = await fetchWithRetry(
-      "http://localhost:3000/api/chat",
+      "/api/chat",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
